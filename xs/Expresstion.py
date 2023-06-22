@@ -1,6 +1,6 @@
 '''
 Author: xuranXYS
-LastEditTime: 2023-06-22 12:24:49
+LastEditTime: 2023-06-22 20:45:06
 GitHub: www.github.com/xiaoxustudio
 WebSite: www.xiaoxustudio.top
 Description: By xuranXYS
@@ -8,7 +8,7 @@ Description: By xuranXYS
 # 解释器
 import re
 import enum
-
+import ast
 
 class TypeS(enum.Enum):
     caozuofu=1
@@ -20,6 +20,14 @@ class TypeS(enum.Enum):
 # 存放命名空间
 F_Space={
 }
+
+# 文件全局命名空间
+T_Space={
+    "global":{},
+    "local":{}
+}
+
+
 
 # 表达式操作符
 bds_list=["{","}","(",")",";"]
@@ -38,7 +46,9 @@ class xExp:
         if text.count("{")==text.count("}"):
             # 截取括号之前的函数名称
             try:
-                
+                # 使用正则表达式匹配并替换每行中的注释内容
+                pattern = r"//.*"
+                text = re.sub(pattern, "", text)
                 #按照嵌套截取{}
                 # 记录需要处理的括号数量
                 left_count=0
@@ -151,12 +161,19 @@ class xExp:
                 n_pos=[]
                 # 运行main里面的代码
                 for i in F_Space["main"]["main()"]["sub"]:
-                    n_te=i.replace(" ","")
-                    if F_Space["main"]["main()"]["sub"][n_te]=="None":
+                    #如果不是变量则替换空行
+                    if i.startswith("local",0) or i.startswith("global",0):
+                        n_te=i.replace("local","local@")
+                        n_te=n_te.replace("global","global@")
+                    else:
+                        n_te=i.replace(" ","")
+                    if F_Space["main"]["main()"]["sub"][n_te.replace("@","")]=="None":
                         n_pos.append(n_te)
                         if ";" in n_te:
                             if xExp_type().execute(n_te)==TypeS.hanshu:
                                 xExp_F(n_te)
+                            elif xExp_type().execute(n_te)==TypeS.biaodashi:
+                                XExp_sub(n_te)
                         elif not n_te in bds_list:
                             # 不是表达式操作符则报错
                             raise ErrorM(["Error","表达式错误"])
@@ -168,7 +185,6 @@ class xExp:
                 print(e.args[0]+":"+e.args[1])
 
 
-
 function_list={
     "tw":print
 }
@@ -176,15 +192,68 @@ function_list={
 class XFunc:
     def tw(self,*args):
         for i in args:
-            print(i)
+            variables = dict(T_Space["global"],**T_Space["local"])
+            # 将不是字符串的字母替换成数值
+            pattern = r'[a-zA-Z_]\w*'
+            variable_names = re.findall(pattern, i)
+            
+            # 输出方式
+            show_type=1
+            # 替换内容2中的变量名为对应的值
+            for name in variable_names:
+                if name in variables:
+                    # 判断是否是数字
+                    pattern = r'^[-+]?(\d+(\.\d*)?|\.\d+)([eE][-+]?\d+)?$'
+                    i = i.replace(name, str(variables[name]))
+                    if bool(re.match(pattern, i)):
+                        # 是数字
+                        show_type=1
+                    else:
+                        show_type=2
+            
+            match show_type:
+                case 1:
+                    print(i)
+                    break
+                case 2:
+                    print(eval(str(i)))
+                    break
     def execute(self,text:str,ar:list):
         try:
             for i in ar:
-                eval("self."+text+"("+str(i)+")")
-        except Exception as error:
-            return ["Error","函数解析错误"]
+                # 判断是否是字符串类型
+                if str(i).find("\"",0)!=-1 and str(i).find("\"",len(str(i))!=-1):
+                    eval("self."+text+"("+str(i)+")")
+                elif i in T_Space["global"] or i in T_Space["local"]:
+                    res = T_Space["global" if i in T_Space["global"] else "local"][i]
+                    eval("self."+text+"("+str(res)+")")
+                elif ast.parse(str(i)):
+                    # 表达式解析
+                    eval("self."+text+"(\""+str(i)+"\")")
+                else:
+                    raise ErrorM(["Error","表达式异常字符错误"])
+        except ErrorM as e:
+            print(e.args[0]+":"+e.args[1])
             
 
+
+# 内表达式解析器
+class XExp_sub:
+    def __init__(self,text) -> TypeS:
+        try:
+            # 使用正则表达式匹配目标内容
+            pattern = r"([^@]+)@([^=]+)=([^;]+);"
+            matches = re.findall(pattern, text)
+            # 输出结果
+            for match in matches:
+                left = match[0].strip()
+                middle = match[1].strip()
+                ast.parse(match[2].strip())
+                right = re.sub(r'\s+', '', match[2].strip())
+                # 加入到全局存储表里面
+                T_Space[left][middle]=right
+        except SyntaxError:
+            return False
 
 
 
@@ -197,7 +266,8 @@ class xExp_F:
         try:
             XFunc().execute(e_pos,e_pos_args.split(","))
         except Exception as error:
-            return ["Error","出现异常错误"]
+            raise ErrorM(["Error","出现异常错误"])
+
 
 
 
