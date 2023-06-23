@@ -1,6 +1,6 @@
 '''
 Author: xuranXYS
-LastEditTime: 2023-06-22 20:45:06
+LastEditTime: 2023-06-24 01:19:16
 GitHub: www.github.com/xiaoxustudio
 WebSite: www.xiaoxustudio.top
 Description: By xuranXYS
@@ -9,6 +9,12 @@ Description: By xuranXYS
 import re
 import enum
 import ast
+import os, sys
+current_dir = os.path.abspath(os.path.dirname(__file__))
+sys.path.append(current_dir)
+# 导入内置函数库
+from Func import *
+
 
 class TypeS(enum.Enum):
     caozuofu=1
@@ -31,6 +37,7 @@ T_Space={
 
 # 表达式操作符
 bds_list=["{","}","(",")",";"]
+
 
 
 # 异常错误管理器
@@ -144,7 +151,7 @@ class xExp:
                 pattern = r"fc\s+\w+\s*\(.*?\)\s*\{(?:\{.*?\}|.)*?\}"
                 regex = re.compile(pattern, re.DOTALL)
                 matches = regex.findall(text)
-
+                
                 # 将匹配结果存储在字典中
                 result_dict = {}
                 for match in matches:
@@ -157,7 +164,6 @@ class xExp:
                     allstr=find_parse(content,j_type="hs")
                     # 将截取的内容添加进空间
                     F_Space[name]=allstr
-                
                 n_pos=[]
                 # 运行main里面的代码
                 for i in F_Space["main"]["main()"]["sub"]:
@@ -184,12 +190,17 @@ class xExp:
             except ErrorM as e:
                 print(e.args[0]+":"+e.args[1])
 
-
+# 内置函数库
 function_list={
-    "tw":print
+    "tw":"self",
+    "Space":"other",
 }
+
+
 # 函数执行器
-class XFunc:
+class XFunc(Func):
+    def Space(self):
+        return super().Space(self,T_Space)
     def tw(self,*args):
         for i in args:
             variables = dict(T_Space["global"],**T_Space["local"])
@@ -213,9 +224,18 @@ class XFunc:
             
             match show_type:
                 case 1:
-                    print(i)
+                    # 类型判断
+                    leixing=xExp_type().execute(str(i),switch_t=2)
+                    match leixing:
+                        case TypeS.zfc:
+                            print(i)
+                            break
+                        case TypeS.hanshu:
+                            print(eval("self."+str(i)))
+                            break
                     break
                 case 2:
+                    # 运算
                     print(eval(str(i)))
                     break
     def execute(self,text:str,ar:list):
@@ -259,11 +279,23 @@ class XExp_sub:
 
 # 函数解析器
 class xExp_F:
-    def __init__(self,text):
-        # 函数标识
-        e_pos :str=re.sub(r'\s+', ')', text[:text.rindex('(')] )
-        e_pos_args :str=re.findall(r'\((.*?)\)', text[text.index('('):])[0]
+    def __init__(self,text:str):
         try:
+            # 函数标识
+            
+            # 匹配左括号
+            pattern_left = r".*?\("
+            pattern_right = r"\)"
+            
+            # 以下都是返回位置索引:匹配首次（）
+            left = re.match(pattern_left,text).span()[1]
+            right = list(re.finditer(pattern_right, text))[-1].start()
+            
+            
+            e_pos :str=re.sub(r'\s+', "", text[:left-1])
+            e_pos_args :str=text[left:right]
+            
+            
             XFunc().execute(e_pos,e_pos_args.split(","))
         except Exception as error:
             raise ErrorM(["Error","出现异常错误"])
@@ -275,20 +307,50 @@ class xExp_F:
 
 # 类型解析器
 class xExp_type:
-    def execute(selfl,text:str) -> None:
-        if(text.endswith(");")):
-            # 类型可能是函数
-            res=text[:text.find("(")]
-            if(res):
-                return TypeS.hanshu
-            else:
-                return TypeS.zfc
-        elif(text.endswith(";")):
-            # 类型可能是表达式或函数
-            return TypeS.biaodashi
-        else:
-            # 操作符
-            return TypeS.caozuofu
+    '''
+    description: 
+    param {*} selfl
+    param {str} text
+    param {*} switch_t 有无;号
+    return {*}
+    '''
+    def execute(selfl,text:str,switch_t=1) -> None:
+        match switch_t:
+            case 1:
+                if(text.endswith(");")):
+                    # 类型可能是函数
+                    res=text[:text.find("(")]
+                    if(res):
+                        return TypeS.hanshu
+                    else:
+                        return TypeS.zfc
+                elif(text.endswith(";")):
+                    # 类型可能是表达式或函数
+                    return TypeS.biaodashi
+                elif text in bds_list:
+                    # 操作符
+                    return TypeS.caozuofu
+                else:
+                    # 字符串
+                    return TypeS.zfc
+            case 2:
+                if(text.endswith(")")):
+                    # 类型可能是函数
+                    res=text[:text.find("(")]
+                    if(res):
+                        return TypeS.hanshu
+                    else:
+                        return TypeS.zfc
+                elif(text.endswith(")")):
+                    # 类型可能是表达式或函数
+                    return TypeS.biaodashi
+                elif text in bds_list:
+                    # 操作符
+                    return TypeS.caozuofu
+                else:
+                    # 字符串
+                    return TypeS.zfc
+                    
         
 
 
