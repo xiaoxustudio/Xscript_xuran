@@ -3,3 +3,4 @@
 *.js linguist-language=Python 
 *.xml linguist-language=Python
 *.css linguist-language=Python 
+*.toc linguist-language=Python 
