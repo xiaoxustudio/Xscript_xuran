@@ -10,5 +10,5 @@ fc main(){
     tw(789);
     tw("XYSYYDS");
     //获取变量数组
-    tw(Space());
+    tw($local);
 }

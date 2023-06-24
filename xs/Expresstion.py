@@ -1,6 +1,6 @@
 '''
 Author: xuranXYS
-LastEditTime: 2023-06-24 13:45:16
+LastEditTime: 2023-06-24 14:13:38
 GitHub: www.github.com/xiaoxustudio
 WebSite: www.xiaoxustudio.top
 Description: By xuranXYS
@@ -27,7 +27,7 @@ class TypeS(enum.Enum):
 F_Space={
 }
 
-# 文件全局命名空间
+# 文件全局隐私变量命名空间
 T_Space={
     "global":{},
     "local":{}
@@ -199,16 +199,25 @@ function_list={
 
 # 函数执行器
 class XFunc(Func):
-    def Space(self):
-        return super().Space(self,T_Space)
-    def tw(self,*args):
+    def tw(self,*args,show_type=1):
         for i in args:
+            # 隐私变量首先判断
+            if show_type==3 and args[0].startswith("$"):
+                try:
+                    res=str(args[0]).replace("$","")
+                    print(res)
+                    if res in T_Space:
+                        print(T_Space[res])
+                    else:
+                        raise ErrorM(["Error",self.__class__.__name__+"：内置变量无法找到"])
+                    return 0
+                except ErrorM as e:
+                    print(e.args[0]+":\n"+e.args[1])
+                    return 0
             variables = dict(T_Space["global"],**T_Space["local"])
             # 将不是字符串的字母替换成数值
             pattern = r'[a-zA-Z_]\w*'
             variable_names = re.findall(pattern, i)
-            # 输出方式
-            show_type=1
             # 替换内容2中的变量名为对应的值
             for name in variable_names:
                 if name in variables:
@@ -220,7 +229,6 @@ class XFunc(Func):
                         show_type=1
                     else:
                         show_type=2
-            
             match show_type:
                 case 1:
                     # 类型判断
@@ -233,14 +241,12 @@ class XFunc(Func):
                         case TypeS.hanshu:
                             print(eval("self."+str(i)))
                             break
-                        case __:
-                            print(i)
-                            break
                     break
                 case 2:
                     # 运算
                     print(eval(str(i)))
                     break
+                
     def execute(self,text:str,ar:list):
         try:
             for i in ar:
@@ -250,6 +256,9 @@ class XFunc(Func):
                 elif i in T_Space["global"] or i in T_Space["local"]:
                     res = T_Space["global" if i in T_Space["global"] else "local"][i]
                     eval("self."+text+"("+str(res)+")")
+                elif str(i).startswith("$"):
+                    # 隐私变量
+                    eval("self."+text+"(\""+str(i)+"\",show_type=3)")
                 elif ast.parse(str(i)):
                     # 表达式解析
                     eval("self."+text+"(\""+str(i)+"\")")
