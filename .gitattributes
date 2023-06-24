@@ -1,2 +1,2 @@
 special-vendored-path/* linguist-vendored
-build/* linguist-vendored=false
+build/main/xref-main.html linguist-vendored=false
