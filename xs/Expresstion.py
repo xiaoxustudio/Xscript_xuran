@@ -1,6 +1,6 @@
 '''
 Author: xuranXYS
-LastEditTime: 2023-06-24 01:19:16
+LastEditTime: 2023-06-24 13:45:16
 GitHub: www.github.com/xiaoxustudio
 WebSite: www.xiaoxustudio.top
 Description: By xuranXYS
@@ -142,7 +142,7 @@ class xExp:
                                         find_num+1#记录一次处理大括号
                                 return nested_dict
                     except ErrorM as er:
-                        print(er.args[0],er.args[1])                
+                        print(er.args[0]+"：\n"+er.args[1])                
                             
                 
                 
@@ -182,13 +182,13 @@ class xExp:
                                 XExp_sub(n_te)
                         elif not n_te in bds_list:
                             # 不是表达式操作符则报错
-                            raise ErrorM(["Error","表达式错误"])
+                            raise ErrorM(["Error",self.__class__.__name__+"：表达式错误"])
                     
                 return n_pos
             except ValueError:
                 return ["Error","括号前有未知标识符"]
             except ErrorM as e:
-                print(e.args[0]+":"+e.args[1])
+                print(e.args[0]+":\n"+e.args[1])
 
 # 内置函数库
 function_list={
@@ -207,7 +207,6 @@ class XFunc(Func):
             # 将不是字符串的字母替换成数值
             pattern = r'[a-zA-Z_]\w*'
             variable_names = re.findall(pattern, i)
-            
             # 输出方式
             show_type=1
             # 替换内容2中的变量名为对应的值
@@ -226,12 +225,16 @@ class XFunc(Func):
                 case 1:
                     # 类型判断
                     leixing=xExp_type().execute(str(i),switch_t=2)
+                    
                     match leixing:
                         case TypeS.zfc:
                             print(i)
                             break
                         case TypeS.hanshu:
                             print(eval("self."+str(i)))
+                            break
+                        case __:
+                            print(i)
                             break
                     break
                 case 2:
@@ -242,7 +245,7 @@ class XFunc(Func):
         try:
             for i in ar:
                 # 判断是否是字符串类型
-                if str(i).find("\"",0)!=-1 and str(i).find("\"",len(str(i))!=-1):
+                if str(i).find("\"",0)!=-1 and str(i).find("\"",len(str(i))-1)!=-1 or str(i).find("\'",0)!=-1 and str(i).find("\'",len(str(i))-1)!=-1:
                     eval("self."+text+"("+str(i)+")")
                 elif i in T_Space["global"] or i in T_Space["local"]:
                     res = T_Space["global" if i in T_Space["global"] else "local"][i]
@@ -251,9 +254,9 @@ class XFunc(Func):
                     # 表达式解析
                     eval("self."+text+"(\""+str(i)+"\")")
                 else:
-                    raise ErrorM(["Error","表达式异常字符错误"])
+                    raise ErrorM(["Error",self.__class__.__name__+"：函数执行表达式异常字符错误"])
         except ErrorM as e:
-            print(e.args[0]+":"+e.args[1])
+            print(e.args[0]+":\n"+e.args[1])
             
 
 
@@ -270,10 +273,26 @@ class XExp_sub:
                 middle = match[1].strip()
                 ast.parse(match[2].strip())
                 right = re.sub(r'\s+', '', match[2].strip())
-                # 加入到全局存储表里面
-                T_Space[left][middle]=right
+                
+                leixing=xExp_type().execute(str(right),switch_t=2)
+                match leixing:
+                    case TypeS.zfc:
+                        # 是否是表达式
+                        if right.startswith("\"") and right.endswith("\""):
+                            # 加入到全局存储表里面
+                            T_Space[left][middle]="\""+str(right)[1:len(right)-1]+"\""
+                        else:
+                            # 加入到全局存储表里面
+                            T_Space[left][middle]=eval(str(right))
+                        break
+                    case TypeS.hanshu:
+                        # 加入到全局存储表里面
+                        T_Space[left][middle]=eval(str(right))
+                        break
+                
         except SyntaxError:
-            return False
+            raise ErrorM(["Error",self.__class__.__name__+"：无效的语法错误"])
+
 
 
 
@@ -295,10 +314,9 @@ class xExp_F:
             e_pos :str=re.sub(r'\s+', "", text[:left-1])
             e_pos_args :str=text[left:right]
             
-            
             XFunc().execute(e_pos,e_pos_args.split(","))
         except Exception as error:
-            raise ErrorM(["Error","出现异常错误"])
+            raise ErrorM(["Error",self.__class__.__name__+"：函数解析异常错误"])
 
 
 
