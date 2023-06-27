@@ -1,6 +1,6 @@
 '''
 Author: xuranXYS
-LastEditTime: 2023-06-24 15:10:03
+LastEditTime: 2023-06-27 22:49:39
 GitHub: www.github.com/xiaoxustudio
 WebSite: www.xiaoxustudio.top
 Description: By xuranXYS
@@ -10,16 +10,15 @@ import sys,os
 import xs.Expresstion
 
 # test=""
-# s=input("")
 # # 创建解释器
 # exp=xs.Expresstion.xExp()
 
-# with open(s,encoding="utf-8") as file:
+# with open("./a.xs",encoding="utf-8") as file:
 #     test=file.read()
 #     file.close()
 
 
-# exp.execute(test)
+# exp.execute(test,func="main")
 
 
 
